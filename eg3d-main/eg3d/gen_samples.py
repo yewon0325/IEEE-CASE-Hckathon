@@ -28,6 +28,13 @@ from camera_utils import LookAtPoseSampler, FOV_to_intrinsics
 from torch_utils import misc
 from training.triplane import TriPlaneGenerator
 
+import os
+os.environ['TORCH_EXTENSIONS_DIR'] = './torch_extensions'
+os.environ['NVIDIA_TF32_OVERRIDE'] = '0'
+os.environ['DISABLE_CUSTOM_OPS'] = '1'
+
+
+
 
 #----------------------------------------------------------------------------
 
@@ -115,6 +122,7 @@ def create_samples(N=256, voxel_origin=[0, 0, 0], cube_length=2.0):
 @click.option('--shape-format', help='Shape Format', type=click.Choice(['.mrc', '.ply']), default='.mrc')
 @click.option('--reload_modules', help='Overload persistent modules?', type=bool, required=False, metavar='BOOL', default=False, show_default=True)
 def generate_images(
+    
     network_pkl: str,
     seeds: List[int],
     truncation_psi: float,
@@ -136,11 +144,12 @@ def generate_images(
     python gen_samples.py --outdir=output --trunc=0.7 --seeds=0-5 --shapes=True\\
         --network=ffhq-rebalanced-128.pkl
     """
-
+    print(">>> generate_images started")
     print('Loading networks from "%s"...' % network_pkl)
-    device = torch.device('cuda')
+    device = torch.device('cpu')
     with dnnlib.util.open_url(network_pkl) as f:
-        G = legacy.load_network_pkl(f)['G_ema'].to(device) # type: ignore
+        G = legacy.load_network_pkl(f, device=device)['G_ema'].to(device)  # device 인자를 legacy에 넘기도록 수정
+    G.eval()
 
     # Specify reload_modules=True if you want code modifications to take effect; otherwise uses pickled code
     if reload_modules:
@@ -225,6 +234,17 @@ def generate_images(
 #----------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import click
-    generate_images.main()
-#----------------------------------------------------------------------------
+    print(">>> generate_images started")
+    generate_images.callback(
+        network_pkl="eg3d-main/networks/ffhqrebalanced512-64.pkl",
+        seeds=[1, 2, 3],
+        truncation_psi=1,
+        truncation_cutoff=14,
+        outdir="out",
+        shapes=False,
+        shape_res=512,
+        fov_deg=18.837,
+        shape_format=".mrc",
+        class_idx=None,
+        reload_modules=False
+    )

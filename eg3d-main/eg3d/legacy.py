@@ -21,8 +21,13 @@ from torch_utils import misc
 
 #----------------------------------------------------------------------------
 
-def load_network_pkl(f, force_fp16=False):
-    data = _LegacyUnpickler(f).load()
+def load_network_pkl(f, force_fp16=False, device=None):
+    import torch
+    if device is None or not torch.cuda.is_available():
+        device = torch.device('cpu')
+
+    # torch.load 사용 & weights_only=False 명시
+    data = torch.load(f, map_location=device, weights_only=False)
 
     # Legacy TensorFlow pickle => convert.
     if isinstance(data, tuple) and len(data) == 3 and all(isinstance(net, _TFNetworkStub) for net in data):
@@ -58,6 +63,7 @@ def load_network_pkl(f, force_fp16=False):
                 misc.copy_params_and_buffers(old, new, require_all=True)
                 data[key] = new
     return data
+
 
 #----------------------------------------------------------------------------
 

@@ -20,6 +20,12 @@ import torch
 import torch.utils.cpp_extension
 from torch.utils.file_baton import FileBaton
 
+import os
+if os.environ.get('DISABLE_CUSTOM_OPS', '0') == '1':
+    print(">>> Custom ops disabled.")
+    def get_plugin(*args, **kwargs): return None
+    def get_bias_act_plugin(*args, **kwargs): return None
+    def get_upfirdn2d_plugin(*args, **kwargs): return None
 #----------------------------------------------------------------------------
 # Global options.
 
@@ -27,6 +33,10 @@ verbosity = 'brief' # Verbosity level: 'none', 'brief', 'full'
 
 #----------------------------------------------------------------------------
 # Internal helper funcs.
+
+def get_bias_act_plugin():
+    print(">>> Using fallback (no bias_act_plugin).")
+    return None
 
 def _find_compiler_bindir():
     patterns = [
